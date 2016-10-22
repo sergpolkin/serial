@@ -35,7 +35,7 @@ Serial::SerialImpl::SerialImpl (const string &port, unsigned long baudrate,
                                 bytesize_t bytesize,
                                 parity_t parity, stopbits_t stopbits,
                                 flowcontrol_t flowcontrol)
-  : port_ (port.begin(), port.end()), fd_ (INVALID_HANDLE_VALUE), is_open_ (false),
+	: port_(port.begin(), port.end()), fd_(INVALID_HANDLE_VALUE), is_open_(false), is_pipe_(false),
     baudrate_ (baudrate), parity_ (parity),
     bytesize_ (bytesize), stopbits_ (stopbits), flowcontrol_ (flowcontrol)
 {
@@ -62,6 +62,8 @@ Serial::SerialImpl::open ()
     throw SerialException ("Serial port already open.");
   }
 
+  is_pipe_ = port_.compare(0, 4, L"pipe") == 0;
+
   // See: https://github.com/wjwwood/serial/issues/84
   wstring port_with_prefix = _prefix_port_if_needed(port_);
   LPCWSTR lp_port = port_with_prefix.c_str();
@@ -86,7 +88,6 @@ Serial::SerialImpl::open ()
       THROW (IOException, ss.str().c_str());
     }
   }
-
   reconfigurePort();
   is_open_ = true;
 }
@@ -98,7 +99,9 @@ Serial::SerialImpl::reconfigurePort ()
     // Can only operate on a valid file descriptor
     THROW (IOException, "Invalid file descriptor, is the serial port open?");
   }
-
+  if (is_pipe_) {
+	  return;
+  }
   DCB dcbSerialParams = {0};
 
   dcbSerialParams.DCBlength=sizeof(dcbSerialParams);
@@ -304,6 +307,11 @@ Serial::SerialImpl::available ()
 {
   if (!is_open_) {
     return 0;
+  }
+  if (is_pipe_) {
+	  DWORD bytes_available;
+	  PeekNamedPipe(fd_, NULL, 0, NULL, &bytes_available, NULL);
+	  return static_cast<size_t>(bytes_available);
   }
   COMSTAT cs;
   if (!ClearCommError(fd_, NULL, &cs)) {

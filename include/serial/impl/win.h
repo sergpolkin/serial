@@ -184,6 +184,7 @@ private:
   wstring port_;               // Path to the file descriptor
   HANDLE fd_;
 
+  bool is_pipe_;
   bool is_open_;
 
   Timeout timeout_;           // Timeout for read operations
