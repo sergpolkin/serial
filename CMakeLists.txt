@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(serial)
 
-option(examples "Build examples" ON)
+option(examples "Build examples" OFF)
 
 ## Sources
 set(serial_SRCS
@@ -40,4 +40,4 @@ if(examples)
 endif()
 
 ## Include headers
-include_directories(include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
